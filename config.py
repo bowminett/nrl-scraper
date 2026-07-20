@@ -2,9 +2,9 @@
 # ── The only file you need to edit ───────────────────────────────────────────
 
 # Match details
-HOME_TEAM = "Sharks"
-AWAY_TEAM = "Knights"
-ROUND_NUM = "20"
+HOME_TEAM = "Wests Tigers"
+AWAY_TEAM = "Warriors"
+ROUND_NUM = "19"
 YEAR = "2026"
 
 # Scraper settings

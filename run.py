@@ -11,12 +11,6 @@ from scrapers.match_scraper import MatchScraper
 from config import HOME_TEAM, AWAY_TEAM, ROUND_NUM, YEAR, HEADLESS
 import time
 
-from pathlib import Path
-from config import OUTPUT_DIR, YEAR, ROUND_NUM
-
-out_dir = Path(OUTPUT_DIR) / YEAR / f"round_{ROUND_NUM}"
-print(f"Path resolves to: {out_dir.resolve()}")
-
 # ── Option 1: Single match (uses config.py values) ───────────────────────────
 def scrape_single():
     print(f"\nScraping: {HOME_TEAM} vs {AWAY_TEAM} | Round {ROUND_NUM} {YEAR}")
@@ -32,9 +26,9 @@ def scrape_single():
 # ── Option 2: Multiple matches ────────────────────────────────────────────────
 # Add fixtures as (home_team, away_team, round_num, year)
 FIXTURES = [
-    ("Panthers", "Broncos", "20", "2026"),
-    ("Roosters", "Rabbitohs", "20", "2026"),
-    ("Storm", "Cowboys", "20", "2026"),
+    ("Panthers", "Rabbitohs", "18", "2026"),
+    ("Cowboys", "Panthers", "17", "2026"),
+    ("Titans", "Panthers", "16", "2026"),
 ]
 
 def scrape_multiple():
@@ -59,4 +53,4 @@ def scrape_multiple():
 
 # ── Run ───────────────────────────────────────────────────────────────────────
 if __name__ == "__main__":
-    scrape_single()       # swap to scrape_multiple() for a full round
+    scrape_multiple()       # swap to scrape_multiple() for a full round or scrape_single() for a single match
