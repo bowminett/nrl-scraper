@@ -7,9 +7,15 @@ from webdriver_manager.chrome import ChromeDriverManager
 import pandas as pd
 
 HOME_TEAM = "Panthers"
-AWAY_TEAM = "Rabbitohs"
-ROUND_NUM = "18"
+AWAY_TEAM = "Broncos"
+ROUND_NUM = "20"
 YEAR = "2026"
+
+def get_url_name(team_name):
+    return team_name.replace(" ", "-")
+
+HOME_URL_NAME = get_url_name(HOME_TEAM)
+AWAY_URL_NAME = get_url_name(AWAY_TEAM)
 
 STAT_HEADERS = [
     "Number",
@@ -72,7 +78,7 @@ STAT_HEADERS = [
     "Stint Two"
 ]
 
-GAME_LINK = f"https://www.nrl.com/draw/nrl-premiership/{YEAR}/round-{ROUND_NUM}/{HOME_TEAM}-v-{AWAY_TEAM}/"
+GAME_LINK = f"https://www.nrl.com/draw/nrl-premiership/{YEAR}/round-{ROUND_NUM}/{HOME_URL_NAME}-v-{AWAY_URL_NAME}/"
 
 
 driver = webdriver.Chrome(service=Service(ChromeDriverManager().install()))
@@ -139,7 +145,7 @@ try:
 
     df_home = pd.DataFrame(players_home)
 
-    df_home.to_csv(f"{HOME_TEAM}_{ROUND_NUM}_{YEAR}.csv", index=False)
+    df_home.to_csv(f"data/{HOME_URL_NAME}_{ROUND_NUM}_{YEAR}.csv", index=False)
 
 
     #Scrape away-team data
@@ -186,8 +192,8 @@ try:
         player = {
             "Year": YEAR,
             "Round": ROUND_NUM,
-            "Team": HOME_TEAM,
-            "Opponent": AWAY_TEAM,
+            "Team": AWAY_TEAM,
+            "Opponent": HOME_TEAM,
             "Player": name
         }
 
@@ -197,7 +203,7 @@ try:
         players_away.append(player)
 
     df_away = pd.DataFrame(players_away)
-    df_away.to_csv(f"{AWAY_TEAM}_{ROUND_NUM}_{YEAR}.csv", index=False)
+    df_away.to_csv(f"data/{AWAY_URL_NAME}_{ROUND_NUM}_{YEAR}.csv", index=False)
 
 
 
