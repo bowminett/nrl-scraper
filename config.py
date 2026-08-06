@@ -2,9 +2,9 @@
 # ── The only file you need to edit ───────────────────────────────────────────
 
 # Match details
-HOME_TEAM = "Wests Tigers"
-AWAY_TEAM = "Warriors"
-ROUND_NUM = "19"
+HOME_TEAM = "Panthers"
+AWAY_TEAM = "Broncos"
+ROUND_NUM = "20"
 YEAR = "2026"
 
 # Scraper settings
@@ -77,3 +77,8 @@ STAT_HEADERS = [
     "Stint Two",
 ]
 
+TEAM_STAT_DEFAULTS = [
+    "TRIES", "CONVERSIONS", "1 POINT FIELD GOALS",
+    "2 POINT FIELD GOALS", "PENALTY GOALS",
+    "SIN BINS", "SEND OFFS", "HALF TIME",
+]
