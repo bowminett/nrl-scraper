@@ -1,42 +1,59 @@
-# Walks through data/raw/{year}/round_*/ and combines every team CSV
-# into one master file at data/processed/player_stats_{year}.csv
+# processing/combine.py
+# Combines all scraped CSVs into master files for player and team stats.
 #
-# Usage:
-#   python processing/combine.py           # combines current year from config
-#   python processing/combine.py --year 2025
+# Expected folder structure:
+#   data/raw/{year}/round_{n}/player_stats/*.csv
+#   data/raw/{year}/round_{n}/team_stats/*.csv
+#
+# Output:
+#   data/processed/player_stats_{year}.csv
+#   data/processed/team_stats_{year}.csv
 
 import pandas as pd
 from pathlib import Path
-import argparse
 import sys
 
-# Add project root to path so config can be imported
-sys.path.append(str(Path(__file__).parent.parent))
+PROJECT_ROOT = Path(__file__).parent.parent
+sys.path.insert(0, str(PROJECT_ROOT))
+
 from config import YEAR, OUTPUT_DIR
 
+# ── Only thing you need to change ────────────────────────────────────────────
+COMBINE_YEAR = 2026
 
-def combine_season(year: int, raw_dir: str = OUTPUT_DIR) -> pd.DataFrame:
-    season_path = Path(raw_dir) / str(year)
+# ─────────────────────────────────────────────────────────────────────────────
+
+
+def combine_season(year: int) -> pd.DataFrame:
+    """Combine all player stat CSVs into one master file."""
+    season_path = PROJECT_ROOT / OUTPUT_DIR / str(year)
 
     if not season_path.exists():
         print(f"[ERROR] No data found at {season_path}")
         return pd.DataFrame()
 
-    all_dfs = []
     round_dirs = sorted(
         [d for d in season_path.iterdir() if d.is_dir()],
-        key=lambda d: int(d.name.replace("round_", "")) if d.name.replace("round_", "").isdigit() else 999
+        key=lambda d: int(d.name.replace("round_", ""))
+        if d.name.replace("round_", "").isdigit()
+        else 999,
     )
 
     if not round_dirs:
         print(f"[ERROR] No round folders found in {season_path}")
         return pd.DataFrame()
 
-    print(f"Combining season {year}...")
+    print(f"Combining player stats — season {year}...")
     print(f"Found {len(round_dirs)} round folders\n")
 
+    all_dfs = []
     for round_dir in round_dirs:
-        csv_files = list(round_dir.glob("*.csv"))
+        player_dir = round_dir / "player_stats"
+        if not player_dir.exists():
+            print(f"  {round_dir.name}: no player_stats folder — skipping")
+            continue
+
+        csv_files = list(player_dir.glob("*.csv"))
         if not csv_files:
             continue
 
@@ -44,87 +61,121 @@ def combine_season(year: int, raw_dir: str = OUTPUT_DIR) -> pd.DataFrame:
         for csv_file in csv_files:
             try:
                 df = pd.read_csv(csv_file)
-                if df.empty:
-                    print(f"  [WARN] Empty file: {csv_file.name}")
-                    continue
-                round_dfs.append(df)
+                if not df.empty:
+                    round_dfs.append(df)
+                else:
+                    print(f"  [WARN] Empty: {csv_file.name}")
             except Exception as e:
-                print(f"  [WARN] Could not read {csv_file}: {e}")
-                continue
+                print(f"  [WARN] Could not read {csv_file.name}: {e}")
 
         if round_dfs:
-            round_combined = pd.concat(round_dfs, ignore_index=True)
-            all_dfs.append(round_combined)
-            print(f"  {round_dir.name}: {len(csv_files)} teams, {len(round_combined)} player rows")
+            combined = pd.concat(round_dfs, ignore_index=True)
+            all_dfs.append(combined)
+            print(f"  {round_dir.name}: {len(csv_files)} files — {len(combined)} rows")
 
     if not all_dfs:
-        print("[ERROR] No data collected — check your raw data folder")
+        print("[ERROR] No player data collected")
         return pd.DataFrame()
 
     master = pd.concat(all_dfs, ignore_index=True)
 
-    # Remove duplicates — if a match was scraped twice
     before = len(master)
     master = master.drop_duplicates(subset=["Year", "Round", "Team", "Player"])
-    dupes = before - len(master)
-    if dupes > 0:
-        print(f"\n  Removed {dupes} duplicate rows")
+    removed = before - len(master)
+    if removed:
+        print(f"\n  Removed {removed} duplicate rows")
 
-    # Sort chronologically
     master["Round"] = pd.to_numeric(master["Round"], errors="coerce")
     master = master.sort_values(["Round", "Team", "Player"]).reset_index(drop=True)
 
-    # Save
-    out_dir = Path("data/processed")
+    out_dir = PROJECT_ROOT / "data" / "processed"
     out_dir.mkdir(parents=True, exist_ok=True)
     out_path = out_dir / f"player_stats_{year}.csv"
     master.to_csv(out_path, index=False)
 
-    print(f"\n{'='*40}")
-    print(f"Master CSV saved → {out_path}")
-    print(f"  Total rows:    {len(master)}")
-    print(f"  Unique players: {master['Player'].nunique()}")
-    print(f"  Rounds covered: {sorted(master['Round'].dropna().unique().astype(int).tolist())}")
-    print(f"  Teams:         {sorted(master['Team'].unique().tolist())}")
+    print(f"\n{'='*45}")
+    print(f"Player stats saved → {out_path}")
+    print(f"  Rows:    {len(master)}")
+    print(f"  Players: {master['Player'].nunique()}")
+    print(f"  Rounds:  {sorted(master['Round'].dropna().astype(int).unique().tolist())}")
+    print(f"  Teams:   {len(master['Team'].unique())}")
 
     return master
 
 
-def combine_team_stats(year: int, raw_dir: str = OUTPUT_DIR) -> pd.DataFrame:
-    season_path = Path(raw_dir) / str(year)
-    all_dfs = []
+def combine_team_stats(year: int) -> pd.DataFrame:
+    """Combine all team stat CSVs into one master file."""
+    season_path = PROJECT_ROOT / OUTPUT_DIR / str(year)
 
-    for round_dir in sorted(season_path.iterdir()):
-        team_stats_dir = round_dir / "team_stats"
-        if not team_stats_dir.exists():
+    if not season_path.exists():
+        print(f"[ERROR] No data found at {season_path}")
+        return pd.DataFrame()
+
+    round_dirs = sorted(
+        [d for d in season_path.iterdir() if d.is_dir()],
+        key=lambda d: int(d.name.replace("round_", ""))
+        if d.name.replace("round_", "").isdigit()
+        else 999,
+    )
+
+    print(f"\nCombining team stats — season {year}...")
+
+    all_dfs = []
+    for round_dir in round_dirs:
+        team_dir = round_dir / "team_stats"
+        if not team_dir.exists():
+            print(f"  {round_dir.name}: no team_stats folder — skipping")
             continue
-        for csv_file in team_stats_dir.glob("*.csv"):
+
+        csv_files = list(team_dir.glob("*.csv"))
+        if not csv_files:
+            continue
+
+        round_dfs = []
+        for csv_file in csv_files:
             try:
                 df = pd.read_csv(csv_file)
                 if not df.empty:
-                    all_dfs.append(df)
+                    round_dfs.append(df)
+                else:
+                    print(f"  [WARN] Empty: {csv_file.name}")
             except Exception as e:
-                print(f"  [WARN] {csv_file}: {e}")
+                print(f"  [WARN] Could not read {csv_file.name}: {e}")
+
+        if round_dfs:
+            combined = pd.concat(round_dfs, ignore_index=True)
+            all_dfs.append(combined)
+            print(f"  {round_dir.name}: {len(csv_files)} files — {len(combined)} rows")
 
     if not all_dfs:
-        print(f"No team stats found for {year}")
+        print("[ERROR] No team data collected")
         return pd.DataFrame()
 
     master = pd.concat(all_dfs, ignore_index=True)
+
+    before = len(master)
     master = master.drop_duplicates(subset=["Year", "Round", "Team"])
+    removed = before - len(master)
+    if removed:
+        print(f"\n  Removed {removed} duplicate rows")
+
     master["Round"] = pd.to_numeric(master["Round"], errors="coerce")
     master = master.sort_values(["Round", "Team"]).reset_index(drop=True)
 
-    out_path = Path("data/processed") / f"team_stats_{year}.csv"
+    out_dir = PROJECT_ROOT / "data" / "processed"
+    out_dir.mkdir(parents=True, exist_ok=True)
+    out_path = out_dir / f"team_stats_{year}.csv"
     master.to_csv(out_path, index=False)
-    print(f"Team stats saved → {out_path} ({len(master)} rows)")
+
+    print(f"\n{'='*45}")
+    print(f"Team stats saved → {out_path}")
+    print(f"  Rows:   {len(master)}")
+    print(f"  Rounds: {sorted(master['Round'].dropna().astype(int).unique().tolist())}")
+    print(f"  Teams:  {len(master['Team'].unique())}")
+
     return master
 
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description="Combine NRL player stat CSVs into master file")
-    parser.add_argument("--year", type=int, default=int(YEAR), help="Season year to combine")
-    args = parser.parse_args()
-
-    combine_season(year=args.year)
-    combine_team_stats(year=args.year)
+    combine_season(COMBINE_YEAR)
+    combine_team_stats(COMBINE_YEAR)
