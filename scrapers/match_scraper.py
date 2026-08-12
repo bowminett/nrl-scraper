@@ -143,7 +143,7 @@ class MatchScraper:
 
     def _save(self, df: pd.DataFrame, team: str, round_num: str, year: str):
         """Save a team's stats to CSV."""
-        out_dir = Path(OUTPUT_DIR) / year / f"round_{round_num}"
+        out_dir = Path(OUTPUT_DIR) / year / f"round_{round_num}" / "player_stats"
         out_dir.mkdir(parents=True, exist_ok=True)
 
         slug = team.lower().replace(" ", "_")

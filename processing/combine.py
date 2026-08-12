@@ -90,9 +90,41 @@ def combine_season(year: int, raw_dir: str = OUTPUT_DIR) -> pd.DataFrame:
     return master
 
 
+def combine_team_stats(year: int, raw_dir: str = OUTPUT_DIR) -> pd.DataFrame:
+    season_path = Path(raw_dir) / str(year)
+    all_dfs = []
+
+    for round_dir in sorted(season_path.iterdir()):
+        team_stats_dir = round_dir / "team_stats"
+        if not team_stats_dir.exists():
+            continue
+        for csv_file in team_stats_dir.glob("*.csv"):
+            try:
+                df = pd.read_csv(csv_file)
+                if not df.empty:
+                    all_dfs.append(df)
+            except Exception as e:
+                print(f"  [WARN] {csv_file}: {e}")
+
+    if not all_dfs:
+        print(f"No team stats found for {year}")
+        return pd.DataFrame()
+
+    master = pd.concat(all_dfs, ignore_index=True)
+    master = master.drop_duplicates(subset=["Year", "Round", "Team"])
+    master["Round"] = pd.to_numeric(master["Round"], errors="coerce")
+    master = master.sort_values(["Round", "Team"]).reset_index(drop=True)
+
+    out_path = Path("data/processed") / f"team_stats_{year}.csv"
+    master.to_csv(out_path, index=False)
+    print(f"Team stats saved → {out_path} ({len(master)} rows)")
+    return master
+
+
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Combine NRL player stat CSVs into master file")
     parser.add_argument("--year", type=int, default=int(YEAR), help="Season year to combine")
     args = parser.parse_args()
 
     combine_season(year=args.year)
+    combine_team_stats(year=args.year)

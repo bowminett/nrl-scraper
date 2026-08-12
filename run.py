@@ -130,4 +130,4 @@ def scrape_all_multiple(fixtures: list):
 #   scrape_all_multiple(ROUND_21)     one round, both
 
 if __name__ == "__main__":
-    scrape_team_multiple(ROUND_17)
+    scrape_all_multiple(ROUND_23)
