@@ -7,7 +7,7 @@ from selenium.webdriver.support import expected_conditions as EC
 
 import sys
 sys.path.insert(0, str(Path(__file__).parent.parent))
-from config import WAIT_TIMEOUT, OUTPUT_DIR, TEAM_STAT_DEFAULTS
+from config import WAIT_TIMEOUT, OUTPUT_DIR, TEAM_STAT_DEFAULTS, TEAM_STAT_SHOTS
 
 
 class TeamScraper:
@@ -47,6 +47,10 @@ class TeamScraper:
 
         # Set default zeros
         for key in TEAM_STAT_DEFAULTS:
+            stats_home[key] = 0
+            stats_away[key] = 0
+
+        for key in TEAM_STAT_SHOTS:
             stats_home[key] = 0
             stats_away[key] = 0
 
